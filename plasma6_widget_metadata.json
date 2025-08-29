@@ -1,0 +1,561 @@
+{
+  "metadata.json": {
+    "KPlugin": {
+      "Authors": [
+        {
+          "Email": "keithvc1972@hotmail.com",
+          "Name": "X-Seti"
+        }
+      ],
+      "Category": "Environment and Weather",
+      "Description": "Advanced weather widget with desktop effects integration inspired by The Martian UI design",
+      "Icon": "weather-clouds",
+      "Id": "org.kde.plasma.weathereffects",
+      "License": "GPL-2.0+",
+      "Name": "Weather Effects Widget",
+      "ServiceTypes": [
+        "Plasma/Applet"
+      ],
+      "Version": "1.0",
+      "Website": "https://kde.org/plasma-desktop"
+    },
+    "X-Plasma-API": "declarativeappletscript",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "X-Plasma-Provides": [
+      "org.kde.plasma.weather"
+    ]
+  },
+
+  "config/config.qml": `
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+import org.kde.kirigami 2.4 as Kirigami
+
+Kirigami.FormLayout {
+    id: configRoot
+    
+    property alias cfg_location: locationField.text
+    property alias cfg_updateInterval: intervalSpinBox.value
+    property alias cfg_enableEffects: effectsCheckBox.checked
+    property alias cfg_showPressure: pressureCheckBox.checked
+    property alias cfg_showForecast: forecastCheckBox.checked
+    property alias cfg_martianTheme: themeCheckBox.checked
+    
+    TextField {
+        id: locationField
+        Kirigami.FormData.label: i18n("Location:")
+        placeholderText: i18n("Enter city name or coordinates")
+    }
+    
+    SpinBox {
+        id: intervalSpinBox
+        Kirigami.FormData.label: i18n("Update interval (minutes):")
+        from: 5
+        to: 120
+        value: 30
+        textFromValue: function(value) {
+            return i18n("%1 min", value)
+        }
+    }
+    
+    CheckBox {
+        id: effectsCheckBox
+        Kirigami.FormData.label: i18n("Enable desktop effects:")
+        text: i18n("Apply weather effects to desktop")
+        checked: true
+    }
+    
+    CheckBox {
+        id: pressureCheckBox
+        Kirigami.FormData.label: i18n("Show pressure curve:")
+        text: i18n("Display atmospheric pressure data")
+        checked: true
+    }
+    
+    CheckBox {
+        id: forecastCheckBox
+        Kirigami.FormData.label: i18n("Show weekly forecast:")
+        text: i18n("Display 7-day weather forecast")
+        checked: true
+    }
+    
+    CheckBox {
+        id: themeCheckBox
+        Kirigami.FormData.label: i18n("Martian UI theme:")
+        text: i18n("Use The Martian inspired interface design")
+        checked: true
+    }
+    
+    Kirigami.Separator {
+        Kirigami.FormData.isSection: true
+        Kirigami.FormData.label: i18n("Desktop Effects")
+    }
+    
+    Label {
+        text: i18n("Available effects: Rain, Snow, Day/Night dimming")
+        color: Kirigami.Theme.disabledTextColor
+        font.pointSize: Kirigami.Theme.smallFont.pointSize
+    }
+    
+    Label {
+        text: i18n("Note: Requires KWin compositor effects to be enabled")
+        color: Kirigami.Theme.disabledTextColor
+        font.pointSize: Kirigami.Theme.smallFont.pointSize
+    }
+}`,
+
+  "package_structure": {
+    "contents/": {
+      "ui/": {
+        "main.qml": "// Main widget QML file (already created above)",
+        "WeatherChart.qml": "// Custom weather chart component",
+        "EffectsPanel.qml": "// Desktop effects control panel"
+      },
+      "config/": {
+        "config.qml": "// Configuration interface",
+        "main.xml": "// Configuration schema"
+      },
+      "locale/": {
+        "en/": "// English translations",
+        "de/": "// German translations (optional)"
+      }
+    },
+    "metadata.json": "// Widget metadata and information"
+  },
+
+  "main.xml": `<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
+  <kcfgfile name=""/>
+
+  <group name="General">
+    <entry name="location" type="String">
+      <label>Weather location</label>
+      <default>Tenbury Wells, UK</default>
+    </entry>
+    <entry name="updateInterval" type="Int">
+      <label>Update interval in minutes</label>
+      <default>30</default>
+    </entry>
+    <entry name="enableEffects" type="Bool">
+      <label>Enable desktop effects</label>
+      <default>true</default>
+    </entry>
+    <entry name="showPressure" type="Bool">
+      <label>Show atmospheric pressure</label>
+      <default>true</default>
+    </entry>
+    <entry name="showForecast" type="Bool">
+      <label>Show weekly forecast</label>
+      <default>true</default>
+    </entry>
+    <entry name="martianTheme" type="Bool">
+      <label>Use Martian UI theme</label>
+      <default>true</default>
+    </entry>
+  </group>
+</kcfg>`,
+
+  "install_script.sh": `#!/bin/bash
+
+# X-Seti - Weather Effects Widget Installation Script
+# For Plasma 6 on ARM64 systems
+# Includes weather-widget-2 dependency installation
+
+echo "====================================================="
+echo "  Weather Effects Widget Installation for Plasma 6  "
+echo "  Based on blackadderkate/weather-widget-2          "
+echo "====================================================="
+
+WIDGET_NAME="org.kde.plasma.weathereffects"
+BASE_WIDGET_NAME="org.kde.weatherWidget"
+PLASMA_DIR="$HOME/.local/share/plasma/plasmoids"
+WIDGET_DIR="$PLASMA_DIR/$WIDGET_NAME"
+BASE_WIDGET_DIR="$PLASMA_DIR/$BASE_WIDGET_NAME"
+TEMP_DIR="/tmp/weather-widget-install"
+
+# Check dependencies
+check_dependencies() {
+    echo "Checking system dependencies..."
+    
+    # Check for required packages
+    local missing_deps=()
+    
+    command -v git >/dev/null 2>&1 || missing_deps+=("git")
+    command -v curl >/dev/null 2>&1 || missing_deps+=("curl")
+    command -v jq >/dev/null 2>&1 || missing_deps+=("jq")
+    
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        echo "Missing dependencies: ${missing_deps[*]}"
+        echo "Please install them first:"
+        echo "  Ubuntu/Debian: sudo apt install ${missing_deps[*]}"
+        echo "  Arch/Manjaro: sudo pacman -S ${missing_deps[*]}"
+        exit 1
+    fi
+    
+    echo "✓ All dependencies found"
+}
+
+# Install base weather-widget-2
+install_base_widget() {
+    echo ""
+    echo "=== Installing base weather-widget-2 ==="
+    
+    # Create temp directory
+    mkdir -p "$TEMP_DIR"
+    cd "$TEMP_DIR"
+    
+    # Check if already installed
+    if [ -d "$BASE_WIDGET_DIR" ]; then
+        echo "weather-widget-2 already installed, updating..."
+        cd "$BASE_WIDGET_DIR"
+        if [ -d ".git" ]; then
+            git pull
+        else
+            echo "Existing installation found but not git-managed, backing up..."
+            mv "$BASE_WIDGET_DIR" "${BASE_WIDGET_DIR}.backup.$(date +%Y%m%d_%H%M%S)"
+        fi
+    fi
+    
+    # Clone the repository
+    if [ ! -d "$BASE_WIDGET_DIR/.git" ]; then
+        echo "Cloning weather-widget-2 from GitHub..."
+        git clone https://github.com/blackadderkate/weather-widget-2.git
+        
+        # Install to Plasma directory
+        mkdir -p "$PLASMA_DIR"
+        cp -r weather-widget-2/* "$BASE_WIDGET_DIR/"
+        
+        echo "✓ weather-widget-2 installed successfully"
+    fi
+    
+    # Verify installation
+    if [ -f "$BASE_WIDGET_DIR/metadata.json" ] || [ -f "$BASE_WIDGET_DIR/metadata.desktop" ]; then
+        echo "✓ Base widget installation verified"
+    else
+        echo "❌ Base widget installation failed"
+        exit 1
+    fi
+}
+
+# Install enhanced weather effects widget
+install_enhanced_widget() {
+    echo ""
+    echo "=== Installing Enhanced Weather Effects Widget ==="
+    
+    # Create directory structure
+    mkdir -p "$WIDGET_DIR/contents/ui"
+    mkdir -p "$WIDGET_DIR/contents/config"
+    mkdir -p "$WIDGET_DIR/contents/locale"
+    mkdir -p "$WIDGET_DIR/contents/code"
+    
+    # Copy enhanced widget files
+    echo "Creating enhanced widget files..."
+    cp metadata.json "$WIDGET_DIR/"
+    cp contents/ui/main.qml "$WIDGET_DIR/contents/ui/"
+    cp contents/config/config.qml "$WIDGET_DIR/contents/config/"
+    cp contents/config/main.xml "$WIDGET_DIR/contents/config/"
+    
+    # Create integration bridge with base widget
+    create_integration_bridge
+    
+    # Set permissions
+    chmod +x "$WIDGET_DIR/contents/ui/main.qml"
+    
+    echo "✓ Enhanced widget installed"
+}
+
+# Create integration bridge between widgets
+create_integration_bridge() {
+    echo "Creating integration bridge with weather-widget-2..."
+    
+    # Create weather data bridge
+cat > "$WIDGET_DIR/contents/code/WeatherDataBridge.qml" << 'BRIDGE_EOF'
+// Integration bridge with weather-widget-2
+import QtQuick 2.15
+import org.kde.plasma.core 2.1 as PlasmaCore
+
+QtObject {
+    id: weatherBridge
+    
+    // Connect to base weather widget's data source
+    property var baseWeatherSource: PlasmaCore.DataSource {
+        engine: "weather"
+        connectedSources: plasmoid.configuration.location ? [plasmoid.configuration.location] : []
+        interval: plasmoid.configuration.updateInterval * 60000
+    }
+    
+    // Expose weather data in enhanced format
+    property var weatherData: {
+        var data = baseWeatherSource.data[plasmoid.configuration.location] || {}
+        return {
+            location: plasmoid.configuration.location || "Unknown",
+            current: {
+                temp: data["Current Conditions"] ? parseFloat(data["Current Conditions"]) : 0,
+                condition: data["Current Weather"] || "unknown",
+                humidity: data["Humidity"] || "0%",
+                pressure: data["Pressure"] || "0 hPa",
+                windSpeed: data["Wind Speed"] || "0 km/h",
+                visibility: data["Visibility"] || "N/A"
+            },
+            forecast: parseForecastData(data)
+        }
+    }
+    
+    function parseForecastData(data) {
+        var forecast = []
+        for (var i = 0; i < 7; i++) {
+            var dayKey = "Short Forecast Day " + i
+            var tempKey = "High Temperature Day " + i
+            var lowTempKey = "Low Temperature Day " + i
+            
+            forecast.push({
+                day: formatDay(i),
+                temps: [
+                    parseFloat(data[lowTempKey]) || 0,
+                    parseFloat(data[tempKey]) || 0
+                ],
+                condition: data[dayKey] || "unknown",
+                rain: Math.random() * 5 // Placeholder - enhance based on actual data
+            })
+        }
+        return forecast
+    }
+    
+    function formatDay(offset) {
+        var date = new Date()
+        date.setDate(date.getDate() + offset)
+        return date.toLocaleDateString('en', {weekday: 'short'})
+    }
+}
+BRIDGE_EOF
+
+    # Create effects controller
+cat > "$WIDGET_DIR/contents/code/EffectsController.qml" << 'EFFECTS_EOF'
+// Desktop effects controller
+import QtQuick 2.15
+import org.kde.plasma.core 2.1 as PlasmaCore
+
+QtObject {
+    id: effectsController
+    
+    property var executable: PlasmaCore.DataSource {
+        engine: "executable"
+        connectedSources: []
+        
+        function exec(command) {
+            connectSource(command)
+        }
+        
+        onNewData: {
+            disconnectSource(sourceName)
+        }
+    }
+    
+    // Apply weather effects based on condition
+    function applyWeatherEffects(condition, timeOfDay) {
+        var script = "weather-wallpaper-controller"
+        
+        switch(condition.toLowerCase()) {
+            case "rain":
+            case "drizzle":
+            case "thunderstorm":
+                executable.exec(script + " rain " + timeOfDay)
+                executable.exec("plasma-apply-colorscheme WeatherRainy")
+                break
+            case "snow":
+                executable.exec(script + " snow " + timeOfDay)
+                executable.exec("plasma-apply-colorscheme WeatherSnowy")
+                break
+            case "clear":
+            case "sunny":
+            default:
+                executable.exec(script + " clear " + timeOfDay)
+                executable.exec("plasma-apply-colorscheme WeatherSunny")
+                break
+        }
+    }
+    
+    // Auto-apply effects based on current weather
+    function autoApplyEffects(weatherData) {
+        var hour = new Date().getHours()
+        var timeOfDay = (hour < 6 || hour > 19) ? "night" : "day"
+        
+        if (weatherData && weatherData.current) {
+            applyWeatherEffects(weatherData.current.condition, timeOfDay)
+        }
+    }
+}
+EFFECTS_EOF
+}
+
+# Install required KDE effects
+install_kde_effects() {
+    echo ""
+    echo "=== Installing KDE Effects ==="
+    
+    KWIN_EFFECTS_DIR="$HOME/.local/share/kwin/effects"
+    mkdir -p "$KWIN_EFFECTS_DIR"
+    
+    # Run the advanced desktop effects setup
+    if [ -f "advanced_desktop_effects.sh" ]; then
+        bash advanced_desktop_effects.sh
+    else
+        echo "⚠ Advanced effects script not found, basic installation only"
+    fi
+    
+    echo "✓ KDE effects setup complete"
+}
+
+# Create fork suggestion and development setup
+setup_development() {
+    echo ""
+    echo "=== Development Setup ==="
+    
+    cat > "$HOME/weather-widget-development.md" << 'DEV_EOF'
+# Weather Widget Development Guide
+
+## Your Fork Development Setup
+
+### 1. Fork the Original Repository
+```bash
+# Go to: https://github.com/blackadderkate/weather-widget-2
+# Click "Fork" to create your own copy
+# Clone your fork:
+git clone https://github.com/YOUR_USERNAME/weather-widget-2.git
+cd weather-widget-2
+```
+
+### 2. Development Workflow
+```bash
+# Create feature branch
+git checkout -b enhanced-martian-ui
+
+# Make your changes
+# Test on your ARM64 systems (Ubuntu/Debian/Manjaro)
+
+# Commit and push
+git add .
+git commit -m "Add Martian UI enhancements and desktop effects"
+git push origin enhanced-martian-ui
+
+# Create pull request back to original repo (optional)
+```
+
+### 3. Integration Points
+
+The enhanced widget integrates with weather-widget-2 via:
+- **WeatherDataBridge.qml**: Connects to base widget's data sources
+- **EffectsController.qml**: Adds desktop effects functionality
+- **Shared configuration**: Uses same location/API settings
+
+### 4. Enhancement Opportunities
+
+#### UI Improvements:
+- [ ] The Martian inspired grid layouts
+- [ ] Atmospheric pressure curves
+- [ ] Real-time weather charts
+- [ ] HAB-style status indicators
+
+#### Desktop Integration:
+- [ ] Dynamic wallpaper changes
+- [ ] KWin compositor effects
+- [ ] Color scheme automation
+- [ ] System-wide weather theming
+
+#### ARM64 Optimizations:
+- [ ] Performance improvements for ARM processors
+- [ ] Touch-friendly interface scaling
+- [ ] Power consumption optimization
+
+### 5. Testing on Multiple Distros
+
+Your ARM64 test setup:
+- **Ubuntu ARM64**: Test stability and performance
+- **Debian ARM64**: Test compatibility  
+- **Manjaro Plasma6**: Test latest Plasma features
+
+### 6. Contribution Back to Original
+
+Consider contributing these enhancements back:
+1. The Martian UI theme as optional mode
+2. Desktop effects integration
+3. ARM64 performance improvements
+4. Multi-distro compatibility fixes
+
+### 7. Development Commands
+
+```bash
+# Install your fork for testing
+./install_script.sh
+
+# Reload Plasma to test changes
+killall plasmashell; kstart5 plasmashell
+
+# Monitor logs for debugging
+journalctl --user -f | grep plasma
+```
+DEV_EOF
+
+    echo "✓ Development guide created: ~/weather-widget-development.md"
+}
+
+# Main installation
+main() {
+    check_dependencies
+    install_base_widget
+    install_enhanced_widget
+    install_kde_effects
+    setup_development
+    
+    echo ""
+    echo "====================================================="
+    echo "             🎉 Installation Complete! 🎉           "
+    echo "====================================================="
+    echo ""
+    echo "✅ Installed Components:"
+    echo "   • weather-widget-2 (base widget)"
+    echo "   • Enhanced Weather Effects Widget"
+    echo "   • KDE desktop effects integration"
+    echo "   • Development setup guide"
+    echo ""
+    echo "🚀 Next Steps:"
+    echo "   1. Restart Plasma: killall plasmashell; kstart5 plasmashell"
+    echo "   2. Add widgets: Right-click → Add Widgets"
+    echo "   3. Configure location in widget settings"
+    echo "   4. Fork the repo: https://github.com/blackadderkate/weather-widget-2"
+    echo "   5. Read: ~/weather-widget-development.md"
+    echo ""
+    echo "🎨 Available Widgets:"
+    echo "   • Weather Widget (original)"
+    echo "   • Weather Effects Widget (Martian-themed)"
+    echo ""
+    echo "⚡ Desktop Effects:"
+    echo "   • rain, snow, day/night theming"
+    echo "   • Automatic wallpaper changes"
+    echo "   • Color scheme integration"
+    echo ""
+    echo "Happy coding! 🌟"
+}
+
+# Run installation
+main "$@"
+echo ""
+echo "To add the widget:"
+echo "1. Right-click on desktop or panel"
+echo "2. Select 'Add Widgets...'"
+echo "3. Search for 'Weather Effects Widget'"
+echo "4. Add to your desktop or panel"
+echo ""
+echo "Widget features:"
+echo "- Real-time weather data with beautiful charts"
+echo "- Desktop effects (rain, snow, day/night)"
+echo "- The Martian inspired UI design"
+echo ""
+echo "Advanced usage:"
+echo "- Configure location in widget settings"
+echo "- Enable compositor effects in System Settings > Desktop Effects"
+echo "- Use 'qdbus' commands for manual effect control"

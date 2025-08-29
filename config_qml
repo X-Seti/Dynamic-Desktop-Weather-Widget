@@ -1,0 +1,79 @@
+
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+import org.kde.kirigami 2.4 as Kirigami
+
+Kirigami.FormLayout {
+    id: configRoot
+    
+    property alias cfg_location: locationField.text
+    property alias cfg_updateInterval: intervalSpinBox.value
+    property alias cfg_enableEffects: effectsCheckBox.checked
+    property alias cfg_showPressure: pressureCheckBox.checked
+    property alias cfg_showForecast: forecastCheckBox.checked
+    property alias cfg_martianTheme: themeCheckBox.checked
+    
+    TextField {
+        id: locationField
+        Kirigami.FormData.label: i18n("Location:")
+        placeholderText: i18n("Enter city name or coordinates")
+        text: "Tenbury Wells, UK"
+    }
+    
+    SpinBox {
+        id: intervalSpinBox
+        Kirigami.FormData.label: i18n("Update interval (minutes):")
+        from: 5
+        to: 120
+        value: 30
+        textFromValue: function(value) {
+            return i18n("%1 min", value)
+        }
+    }
+    
+    CheckBox {
+        id: effectsCheckBox
+        Kirigami.FormData.label: i18n("Enable desktop effects:")
+        text: i18n("Apply weather effects to desktop")
+        checked: true
+    }
+    
+    CheckBox {
+        id: pressureCheckBox
+        Kirigami.FormData.label: i18n("Show pressure curve:")
+        text: i18n("Display atmospheric pressure data")
+        checked: true
+    }
+    
+    CheckBox {
+        id: forecastCheckBox
+        Kirigami.FormData.label: i18n("Show weekly forecast:")
+        text: i18n("Display 7-day weather forecast")
+        checked: true
+    }
+    
+    CheckBox {
+        id: themeCheckBox
+        Kirigami.FormData.label: i18n("Martian UI theme:")
+        text: i18n("Use The Martian inspired interface design")
+        checked: true
+    }
+    
+    Kirigami.Separator {
+        Kirigami.FormData.isSection: true
+        Kirigami.FormData.label: i18n("Desktop Effects")
+    }
+    
+    Label {
+        text: i18n("Available effects: Rain, Snow, Day/Night dimming")
+        color: Kirigami.Theme.disabledTextColor
+        font.pointSize: Kirigami.Theme.smallFont.pointSize
+    }
+    
+    Label {
+        text: i18n("Note: Requires KWin compositor effects to be enabled")
+        color: Kirigami.Theme.disabledTextColor
+        font.pointSize: Kirigami.Theme.smallFont.pointSize
+    }
+}

@@ -1,0 +1,521 @@
+// main.qml - X-Seti - Plasma 6 Weather Widget with Martian UI
+import QtQuick 2.15
+import QtQuick.Controls 2.15
+import QtQuick.Layouts 1.15
+import QtQuick.Shapes 1.15
+import org.kde.plasma.core 2.1 as PlasmaCore
+import org.kde.plasma.components 3.0 as PlasmaComponents3
+import org.kde.plasma.extras 2.0 as PlasmaExtras
+import org.kde.plasma.plasmoid 2.0
+
+PlasmoidItem {
+    id: root
+    
+    // Widget properties
+    width: 800
+    height: 500
+    
+    // Configuration properties
+    property string location: plasmoid.configuration.location || "Tenbury Wells, UK"
+    property int updateInterval: plasmoid.configuration.updateInterval || 30
+    property bool enableEffects: plasmoid.configuration.enableEffects || true
+    property bool martianTheme: plasmoid.configuration.martianTheme || true
+    
+    // Weather data
+    property var weatherData: {
+        "location": location,
+        "current": {
+            "temp": currentTemp,
+            "condition": currentCondition,
+            "humidity": currentHumidity,
+            "pressure": currentPressure,
+            "windSpeed": currentWindSpeed,
+            "visibility": currentVisibility
+        },
+        "forecast": forecastData
+    }
+    
+    // Current weather properties
+    property real currentTemp: 15
+    property string currentCondition: "cloudy"
+    property string currentHumidity: "78%"
+    property string currentPressure: "1013 hPa"
+    property string currentWindSpeed: "12 km/h"
+    property string currentVisibility: "10 km"
+    property var forecastData: []
+    
+    // Desktop effects state
+    property bool effectsEnabled: false
+    property string currentEffect: "none"
+    property real dimAmount: 0.0
+    
+    // Martian color scheme
+    property var martianColors: {
+        "background": "#0a0e14",
+        "surface": "#1a1f2e", 
+        "primary": "#40b5f6",
+        "secondary": "#81c784",
+        "warning": "#ff9800",
+        "danger": "#f44336",
+        "text": "#cdd6f4",
+        "textSecondary": "#a6adc8"
+    }
+    
+    // Main container
+    Rectangle {
+        anchors.fill: parent
+        color: martianTheme ? martianColors.background : theme.backgroundColor
+        radius: 12
+        border.color: martianTheme ? martianColors.primary : theme.highlightColor
+        border.width: 1
+        
+        // Grid overlay for Martian theme
+        Canvas {
+            anchors.fill: parent
+            opacity: martianTheme ? 0.1 : 0
+            visible: martianTheme
+            
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.strokeStyle = martianColors.primary
+                ctx.lineWidth = 0.5
+                
+                // Draw grid
+                for (var x = 0; x < width; x += 20) {
+                    ctx.beginPath()
+                    ctx.moveTo(x, 0)
+                    ctx.lineTo(x, height)
+                    ctx.stroke()
+                }
+                for (var y = 0; y < height; y += 20) {
+                    ctx.beginPath()
+                    ctx.moveTo(0, y)
+                    ctx.lineTo(width, y)
+                    ctx.stroke()
+                }
+            }
+        }
+        
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 16
+            spacing: 12
+            
+            // Header with location and current conditions
+            RowLayout {
+                Layout.fillWidth: true
+                
+                Column {
+                    PlasmaExtras.Heading {
+                        text: weatherData.location + " (LOCAL)"
+                        level: 3
+                        color: martianTheme ? martianColors.text : theme.textColor
+                        font.bold: true
+                    }
+                    
+                    Row {
+                        spacing: 20
+                        Text {
+                            text: Math.round(weatherData.current.temp) + "°C"
+                            color: martianTheme ? martianColors.primary : theme.highlightColor
+                            font.pixelSize: 32
+                            font.bold: true
+                        }
+                        Text {
+                            text: getWeatherIcon(weatherData.current.condition)
+                            font.pixelSize: 32
+                            color: martianTheme ? martianColors.warning : theme.textColor
+                        }
+                    }
+                }
+                
+                Item { Layout.fillWidth: true }
+                
+                // System info
+                Column {
+                    spacing: 5
+                    Text {
+                        text: "Sol: " + Math.floor(Date.now() / 86400000) % 1000
+                        color: martianTheme ? martianColors.textSecondary : theme.textColor
+                        font.pixelSize: 10
+                        visible: martianTheme
+                    }
+                    Text {
+                        text: "Status: NOMINAL"
+                        color: martianTheme ? martianColors.secondary : theme.positiveTextColor
+                        font.pixelSize: 10
+                        visible: martianTheme
+                    }
+                }
+            }
+            
+            // Current conditions grid
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 100
+                color: martianTheme ? martianColors.surface : theme.backgroundColor
+                radius: 8
+                border.color: martianTheme ? martianColors.primary : theme.highlightColor
+                border.width: 1
+                
+                GridLayout {
+                    anchors.fill: parent
+                    anchors.margins: 15
+                    columns: 4
+                    
+                    // Weather metrics
+                    Repeater {
+                        model: [
+                            {label: "PRESSURE", value: weatherData.current.pressure, unit: "", status: "NOMINAL"},
+                            {label: "HUMIDITY", value: weatherData.current.humidity, unit: "", status: "NORMAL"},
+                            {label: "WIND", value: weatherData.current.windSpeed, unit: "", status: "MODERATE"},
+                            {label: "VISIBILITY", value: weatherData.current.visibility, unit: "", status: "GOOD"}
+                        ]
+                        
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            color: "transparent"
+                            border.color: martianTheme ? martianColors.primary : theme.highlightColor
+                            border.width: 1
+                            radius: 4
+                            
+                            Column {
+                                anchors.centerIn: parent
+                                spacing: 2
+                                
+                                Text {
+                                    text: modelData.label
+                                    color: martianTheme ? martianColors.textSecondary : theme.textColor
+                                    font.pixelSize: 9
+                                    font.bold: true
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+                                
+                                Text {
+                                    text: modelData.value
+                                    color: martianTheme ? martianColors.primary : theme.highlightColor
+                                    font.pixelSize: 14
+                                    font.bold: true
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                }
+                                
+                                Rectangle {
+                                    width: 40
+                                    height: 8
+                                    color: martianTheme ? martianColors.secondary : theme.positiveTextColor
+                                    radius: 2
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    
+                                    Text {
+                                        text: modelData.status
+                                        color: martianTheme ? martianColors.background : theme.backgroundColor
+                                        font.pixelSize: 6
+                                        anchors.centerIn: parent
+                                    }
+                                }
+                            }
+                            
+                            // Animated border effect
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                border.color: martianTheme ? martianColors.primary : theme.highlightColor
+                                border.width: 1
+                                radius: 4
+                                opacity: 0
+                                
+                                SequentialAnimation on opacity {
+                                    running: martianTheme
+                                    loops: Animation.Infinite
+                                    NumberAnimation { to: 0.8; duration: 1000 }
+                                    NumberAnimation { to: 0; duration: 1000 }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Weather chart area
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                color: martianTheme ? martianColors.surface : theme.backgroundColor
+                radius: 8
+                border.color: martianTheme ? martianColors.primary : theme.highlightColor
+                border.width: 1
+                
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    
+                    Text {
+                        text: "ATMOSPHERIC CONDITIONS - LIVE FEED"
+                        color: martianTheme ? martianColors.primary : theme.highlightColor
+                        font.pixelSize: 12
+                        font.bold: true
+                        anchors.horizontalCenter: parent.horizontalCenter
+                    }
+                    
+                    // Simplified weather chart
+                    Canvas {
+                        width: parent.width
+                        height: parent.height - 30
+                        
+                        onPaint: {
+                            var ctx = getContext("2d")
+                            ctx.clearRect(0, 0, width, height)
+                            
+                            if (!martianTheme) return
+                            
+                            // Draw temperature curve
+                            ctx.strokeStyle = martianColors.primary
+                            ctx.lineWidth = 2
+                            ctx.beginPath()
+                            
+                            var points = 20
+                            for (var i = 0; i < points; i++) {
+                                var x = (i / (points - 1)) * (width - 40) + 20
+                                var temp = 15 + Math.sin(i * 0.5) * 5 + Math.random() * 2
+                                var y = height - 20 - ((temp - 10) / 15) * (height - 40)
+                                
+                                if (i === 0) {
+                                    ctx.moveTo(x, y)
+                                } else {
+                                    ctx.lineTo(x, y)
+                                }
+                            }
+                            ctx.stroke()
+                            
+                            // Draw pressure curve
+                            ctx.strokeStyle = martianColors.secondary
+                            ctx.lineWidth = 1
+                            ctx.beginPath()
+                            
+                            for (var j = 0; j < points; j++) {
+                                var px = (j / (points - 1)) * (width - 40) + 20
+                                var pressure = 1013 + Math.sin(j * 0.3) * 10
+                                var py = height - 20 - ((pressure - 1000) / 30) * (height - 40)
+                                
+                                if (j === 0) {
+                                    ctx.moveTo(px, py)
+                                } else {
+                                    ctx.lineTo(px, py)
+                                }
+                            }
+                            ctx.stroke()
+                        }
+                    }
+                }
+            }
+            
+            // Desktop effects controls
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 60
+                color: martianTheme ? martianColors.surface : theme.backgroundColor
+                radius: 8
+                border.color: martianTheme ? martianColors.primary : theme.highlightColor
+                border.width: 1
+                visible: enableEffects
+                
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    
+                    PlasmaExtras.Heading {
+                        text: "ENVIRONMENTAL CONTROL"
+                        level: 5
+                        color: martianTheme ? martianColors.primary : theme.highlightColor
+                    }
+                    
+                    Item { Layout.fillWidth: true }
+                    
+                    Row {
+                        spacing: 10
+                        
+                        PlasmaComponents3.Button {
+                            text: "☔ Rain"
+                            flat: true
+                            onClicked: toggleWeatherEffect("rain")
+                            highlighted: currentEffect === "rain"
+                        }
+                        
+                        PlasmaComponents3.Button {
+                            text: "❄️ Snow"
+                            flat: true
+                            onClicked: toggleWeatherEffect("snow")
+                            highlighted: currentEffect === "snow"
+                        }
+                        
+                        PlasmaComponents3.Button {
+                            text: "🌙 Night"
+                            flat: true
+                            onClicked: toggleDayNight()
+                            highlighted: dimAmount > 0
+                        }
+                        
+                        PlasmaComponents3.Button {
+                            text: "☀️ Clear"
+                            flat: true
+                            onClicked: clearEffects()
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Status indicator
+        Rectangle {
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.margins: 10
+            width: 12
+            height: 12
+            radius: 6
+            color: martianTheme ? martianColors.secondary : theme.positiveTextColor
+            visible: martianTheme
+            
+            SequentialAnimation on opacity {
+                running: true
+                loops: Animation.Infinite
+                NumberAnimation { to: 0.3; duration: 1000 }
+                NumberAnimation { to: 1.0; duration: 1000 }
+            }
+        }
+    }
+    
+    // Weather data source
+    PlasmaCore.DataSource {
+        id: weatherSource
+        engine: "weather"
+        connectedSources: [location]
+        interval: updateInterval * 60000
+        
+        onDataChanged: {
+            updateWeatherData()
+        }
+    }
+    
+    // Command execution for effects
+    PlasmaCore.DataSource {
+        id: executable
+        engine: "executable"
+        connectedSources: []
+        
+        function exec(command) {
+            connectSource(command)
+        }
+        
+        onNewData: {
+            disconnectSource(sourceName)
+        }
+    }
+    
+    // Functions
+    function getWeatherIcon(condition) {
+        var icons = {
+            "sunny": "☀️",
+            "clear": "☀️",
+            "cloudy": "☁️",
+            "rain": "🌧️",
+            "drizzle": "🌦️",
+            "thunderstorm": "⛈️",
+            "snow": "❄️",
+            "fog": "🌫️",
+            "mist": "🌫️"
+        }
+        return icons[condition.toLowerCase()] || "🌤️"
+    }
+    
+    function toggleWeatherEffect(effect) {
+        if (currentEffect === effect) {
+            clearEffects()
+            return
+        }
+        
+        currentEffect = effect
+        effectsEnabled = true
+        
+        // Execute desktop effects
+        var command = "weather-wallpaper-controller " + effect
+        executable.exec(command)
+    }
+    
+    function toggleDayNight() {
+        dimAmount = dimAmount > 0 ? 0.0 : 0.3
+        
+        var command = "weather-wallpaper-controller dim " + dimAmount
+        executable.exec(command)
+    }
+    
+    function clearEffects() {
+        currentEffect = "none"
+        effectsEnabled = false
+        dimAmount = 0.0
+        
+        executable.exec("weather-wallpaper-controller clear")
+    }
+    
+    function updateWeatherData() {
+        var data = weatherSource.data[location] || {}
+        
+        // Parse weather data
+        if (data["Current Conditions"]) {
+            currentTemp = parseFloat(data["Current Conditions"]) || 15
+        }
+        if (data["Current Weather"]) {
+            currentCondition = data["Current Weather"] || "cloudy"
+        }
+        if (data["Humidity"]) {
+            currentHumidity = data["Humidity"] || "0%"
+        }
+        if (data["Pressure"]) {
+            currentPressure = data["Pressure"] || "1013 hPa"
+        }
+        if (data["Wind Speed"]) {
+            currentWindSpeed = data["Wind Speed"] || "0 km/h"
+        }
+        
+        // Auto-apply effects if enabled
+        if (enableEffects && currentCondition) {
+            autoApplyWeatherEffects()
+        }
+    }
+    
+    function autoApplyWeatherEffects() {
+        var hour = new Date().getHours()
+        var timeOfDay = (hour < 6 || hour > 19) ? "night" : "day"
+        
+        switch(currentCondition.toLowerCase()) {
+            case "rain":
+            case "drizzle":
+                toggleWeatherEffect("rain")
+                break
+            case "snow":
+                toggleWeatherEffect("snow")
+                break
+            case "clear":
+            case "sunny":
+                if (timeOfDay === "night") {
+                    toggleDayNight()
+                }
+                break
+        }
+    }
+    
+    // Update timer
+    Timer {
+        id: updateTimer
+        interval: 60000
+        running: true
+        repeat: true
+        onTriggered: updateWeatherData()
+    }
+    
+    // Initialize
+    Component.onCompleted: {
+        updateWeatherData()
+    }
+}
