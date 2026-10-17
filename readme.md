@@ -1,6 +1,7 @@
-# X-Seti Aug12 2025 - Dynamic Desktop Weather.
-# Follow the 4 steps below for Plasma6 
+# X-Seti Aug12 2025 - Dynamic Desktop Weather. (Discontinued) 
+# This project has been replaced with https://github.com/X-Seti/Atmosphere
 
+How to install;
 # 1. Make scripts executable
 chmod +x install_script.sh
 chmod +x advanced_effects_setup.sh
