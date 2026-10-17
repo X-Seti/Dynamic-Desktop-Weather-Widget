@@ -28,8 +28,8 @@ chmod +x plasma_version_detector.sh
 ./plasma_version_detector.sh
 
 # 3. For Plasma 5 systems, manually install base widget:
-git clone https://github.com/X-Seti/dynamic-weather-widget
-cd plasma-applet-weather-widget
+git clone https://github.com/X-Seti/Atmosphere
+cd Atmosphere
 mkdir build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DLIB_INSTALL_DIR=lib -DKDE_INSTALL_USE_QT_SYS_PATHS=ON
 make && sudo make install
